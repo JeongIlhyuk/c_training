@@ -26,6 +26,7 @@ typedef struct {
 	int count;//주문된 양
 	int total;//총액
 	int capacity;
+	int totalAmount;
 } Table;
 
 int printMain(void) {
