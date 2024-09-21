@@ -1,14 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#define MAX_MENU 50
-#define MAX_FOOD_NAME 50
-#define MAX_PRICE_LENGTH 50
-#define MAX_TABLES 50
+#include <ctype.h>
+
+#define MAX_INPUT 100//\0을 제외한 입력 가능한 최대 글자 수
 
 
 typedef struct FoodNode {
-	char name[MAX_FOOD_NAME];
+	char name[MAX_INPUT];
 	int price;
 	struct FoodNode* next;
 } FoodNode;
@@ -29,19 +28,103 @@ typedef struct {
 	int totalAmount;
 } Table;
 
-int printMain(void) {
-	int select;
-	printf("1. Add menu item\n");
-	printf("2. Remove menu item\n");
-	printf("3. Create order\n");
-	printf("4. View order\n");
-	printf("5. Process payment\n");
-	printf("6. Exit\n");
-	printf("Enter the main menu number:");
-	scanf("%d", &select);
-	return select;
+//입력 규칙
+static int getInt() {
+	//0을 포함한 자연수만 받음
+	//\n을 입력해 주지 않기 때문에 따로 입력해 주어야 함
+	char n[MAX_INPUT + 2];// 1 더 큰 버퍼로 최대 글자 수 초과했는지 판단
+	char* endptr;
+	long number;//int의 범위를 벗어나는지 판단하기 위해 더 큰 범위를 커버하는 long 타입을 사용
+
+	while (1) {
+		if (fgets(n, sizeof(n), stdin) == NULL) {
+			printf("An input error occurred. Please try again.\n");
+		}
+		else {
+			// 개행 문자 제거
+			n[strcspn(n, "\n")] = '\0';//strcspn는 \n 앞의 글자 수를 반환
+			if (strlen(n) > MAX_INPUT) {//strlen은 \0을 제외한 글자 수를 반환
+				printf("Warning: Please enter a number with %d digits or fewer.\n", MAX_INPUT);
+			}
+			else {
+
+				// 입력된 문자열의 앞뒤 공백 제거
+				char* start = n;
+				char* end = n + strlen(n) - 1;
+				while (isspace((unsigned char)*start)) start++;
+				if (*start == '\0') {
+					printf("Error: Empty input.\n");
+				}
+				else {
+					while (end > start && isspace((unsigned char)*end)) end--;
+					*(end + 1) = '\0';
+
+					// 숫자 변환 시도
+					number = strtol(start, &endptr, 10);
+
+					// 변환 후 남은 문자가 있는지 확인
+					if (*endptr != '\0') {//숫자로 변환할 수 없는 문자를 만난 위치
+						printf("Error: Please enter a non-negative integer.\n");
+					}
+					else {
+
+						// 범위 체크
+						if (number < 0 || number > INT_MAX) {
+							printf("Error: Please enter a non-negative integer with up to %d digits.\n", MAX_INPUT);
+						}
+						else {
+							return (int)number;
+						}
+					}
+				}
+			}
+		}
+	}
 }
-void printMenu(Menu* m) {
+static char* getString() {
+	char* s = (char*)malloc(sizeof(char) * (MAX_INPUT + 2));// 1 더 큰 버퍼로 최대 글자 수 초과했는지 판단
+	if (s == NULL) {
+		fprintf(stderr, "메모리 할당 실패\n");
+		return NULL;
+	}
+	while (1) {
+		if (fgets(s, sizeof(MAX_INPUT + 2), stdin) == NULL) {
+			printf("입력 오류 발생\n");
+		}
+		else {
+			s[strcspn(s, "\n")] = '\0';// \n 제거
+			if (strlen(s) > MAX_INPUT) {
+				printf("경고: 입력이 너무 깁니다. \n");
+				continue;
+			}
+			else {
+				return s;
+			}
+		}
+	}
+}
+
+static int printMain(void) {
+	int select;
+	while (1) {
+		printf("1. Add menu item\n");
+		printf("2. Remove menu item\n");
+		printf("3. Create order\n");
+		printf("4. View order\n");
+		printf("5. Process payment\n");
+		printf("6. Exit\n");
+		printf("Enter the main menu number:");
+		select = getInt();
+		printf("\n");
+		if (select > 6 || select < 1) {
+			printf("Enter a number between 1 and 6\n");
+		}
+		else {
+			return select;
+		}
+	}
+}
+static void printMenu(Menu* m) {
 	printf("===== Menu =====\n");
 	FoodNode* current = m->head;
 	int i = 1;
@@ -50,18 +133,26 @@ void printMenu(Menu* m) {
 		current = current->next;
 	}
 }
-int getTableNum() {
-	printf("Enter table number:");
-	int n;
-	scanf("%d", &n);
-	return n;
+static int getTableNum() {
+	while (1) {
+		printf("Enter table number:");
+		int n;
+		n = getInt();
+		printf("\n");;
+		if (n == 0) {
+			printf("Enter a number greater than or equal to 1:");
+		}
+		else {
+			return n;
+		}
+	}
 }
 
-void initMenu(Menu* m) {
+static void initMenu(Menu* m) {
 	m->head = NULL;
 	m->count = 0;
 }
-void addMenu(Menu* m, const char* name, int price) {
+static void addMenu(Menu* m, const char* name, int price) {
 	FoodNode* newNode = (FoodNode*)malloc(sizeof(FoodNode));
 	if (newNode == NULL) {
 		fprintf(stderr, "Memory allocation failed\n");
@@ -84,7 +175,7 @@ void addMenu(Menu* m, const char* name, int price) {
 	m->count++;
 	printf("Menu item '%s' has been added.\n", name);
 }
-void removeMenuItem(Menu* m, int index) {
+static void removeMenuItem(Menu* m, int index) {
 	if (index < 0 || index >= m->count) {
 		printf("Invalid index. Cannot remove item.\n");
 		return;
@@ -110,7 +201,7 @@ void removeMenuItem(Menu* m, int index) {
 
 	m->count--;
 }
-void freeMenu(Menu* m) {
+static void freeMenu(Menu* m) {
 	FoodNode* current = m->head;
 	while (current != NULL) {
 		FoodNode* temp = current;
@@ -121,13 +212,13 @@ void freeMenu(Menu* m) {
 	m->count = 0;
 }
 
-void initTable(Table* t) {
+static void initTable(Table* t) {
 	t->capacity = 10;  // 초기 용량, 필요에 따라 조정 가능
 	t->orderArr = malloc(t->capacity * sizeof(Ordered));
 	t->count = 0;
 	t->total = 0;
 }
-void addOrder(Table* t, int foodIndex, int quantity, Menu* m) {
+static void addOrder(Table* t, int foodIndex, int quantity, Menu* m) {
 	if (t->count == t->capacity) {
 		size_t new_capacity = t->capacity * 2;
 		Ordered* temp = realloc(t->orderArr, new_capacity * sizeof(Ordered));
@@ -156,7 +247,7 @@ void addOrder(Table* t, int foodIndex, int quantity, Menu* m) {
 	t->count++;
 	t->total += quantity * current->price;
 }
-void cleanTable(Table* t) {
+static void cleanTable(Table* t) {
 	if (t->count > 0) {
 		for (int i = 0; i < t->count; i++) {
 			t->orderArr[i].foodIndex = -1;
@@ -166,14 +257,14 @@ void cleanTable(Table* t) {
 	t->count = 0;
 	t->total = 0;
 }
-void freeTable(Table* t) {
+static void freeTable(Table* t) {
 	free(t->orderArr);
 	t->orderArr = NULL;
 	t->count = 0;
 	t->capacity = 0;
 }
 //내용 저장
-void saveMenu(Menu* m) {//여기부터 점검하기!
+static void saveMenu(Menu* m) {
 	FILE* file = fopen("menu.dat", "wb");
 	if (file == NULL) {
 		printf("Error opening file for writing.\n");
@@ -186,7 +277,7 @@ void saveMenu(Menu* m) {//여기부터 점검하기!
 	// 각 메뉴 항목 저장
 	FoodNode* current = m->head;
 	while (current != NULL) {
-		fwrite(current->name, sizeof(char), MAX_FOOD_NAME, file);
+		fwrite(current->name, sizeof(char), MAX_INPUT, file);
 		fwrite(&current->price, sizeof(int), 1, file);
 		current = current->next;
 	}
@@ -194,7 +285,7 @@ void saveMenu(Menu* m) {//여기부터 점검하기!
 	fclose(file);
 	printf("Menu saved successfully.\n");
 }
-void loadMenu(Menu* m) {
+static void loadMenu(Menu* m) {
 	FILE* file = fopen("menu.dat", "rb");
 	if (file == NULL) {
 		printf("No existing menu file found. Starting with an empty menu.\n");
@@ -209,10 +300,10 @@ void loadMenu(Menu* m) {
 	}
 
 	for (int i = 0; i < count; i++) {
-		char name[MAX_FOOD_NAME];
+		char name[MAX_INPUT];
 		int price;
 
-		if (fread(name, sizeof(char), MAX_FOOD_NAME, file) != MAX_FOOD_NAME ||
+		if (fread(name, sizeof(char), MAX_INPUT, file) != MAX_INPUT ||
 			fread(&price, sizeof(int), 1, file) != 1) {
 			printf("Error reading menu item %d.\n", i + 1);
 			fclose(file);
@@ -226,27 +317,27 @@ void loadMenu(Menu* m) {
 	printf("Menu loaded successfully. %d items loaded.\n", count);
 }
 
-void saveTables(Table* tables) {
+static void saveTables(Table* tables) {
 	FILE* file = fopen("tables.dat", "wb");
 	if (file == NULL) {
 		printf("Error opening file for writing.\n");
 		return;
 	}
-	for (int i = 0; i < MAX_TABLES; i++) {
+	for (int i = 0; i < MAX_INPUT; i++) {
 		fwrite(&tables[i].count, sizeof(int), 1, file);
 		fwrite(&tables[i].total, sizeof(int), 1, file);
 		fwrite(tables[i].orderArr, sizeof(Ordered), tables[i].count, file);
 	}
 	fclose(file);
 }
-void loadTables(Table* tables) {
+static void loadTables(Table* tables) {
 	FILE* file = fopen("tables.dat", "rb");
 	if (file == NULL) {
 		printf("No existing tables file found. Starting with empty tables.\n");
 		return;
 	}
 
-	for (int i = 0; i < MAX_TABLES; i++) {
+	for (int i = 0; i < MAX_INPUT; i++) {
 		if (fread(&tables[i].count, sizeof(int), 1, file) != 1 ||
 			fread(&tables[i].total, sizeof(int), 1, file) != 1) {
 			printf("Error reading table %d data.\n", i);
@@ -254,7 +345,7 @@ void loadTables(Table* tables) {
 			return;
 		}
 
-		tables[i].capacity = tables[i].count > 0 ? tables[i].count : MAX_TABLES;
+		tables[i].capacity = tables[i].count > 0 ? tables[i].count : MAX_INPUT;
 		Ordered* temp = realloc(tables[i].orderArr, tables[i].capacity * sizeof(Ordered));
 		if (temp == NULL) {
 			printf("Memory reallocation failed for table %d.\n", i);
@@ -285,8 +376,8 @@ int main(void) {
 	initMenu(&menu);
 	loadMenu(&menu);  // 프로그램 시작 시 메뉴 로드
 	
-	Table table[MAX_TABLES];
-	for (int i = 0; i < MAX_TABLES; i++) {
+	Table table[MAX_INPUT];
+	for (int i = 0; i < MAX_INPUT; i++) {
 		initTable(&table[i]);
 	}
 	loadTables(table);
@@ -298,23 +389,26 @@ int main(void) {
 		{
 		case 1://신메뉴
 		{
-			char name[MAX_FOOD_NAME];
-			int price;
-
 			printf("Enter item information\n");
 			printf("Name: ");
-			scanf("%s", name);
-			printf("Price: ");
-			scanf("%d", &price);
-
-			addMenu(&menu, name, price);
+			char* n = getString();
+			if (n != NULL) {
+				printf("Price: ");
+				int p = getInt();
+				printf("\n");
+				addMenu(&menu, n, p);
+				free(n); //getString 내에서 할당한 메모리를 해제
+			}
+			else {
+				printf("Memory allocation failed\n");
+			}
 		}
 		break;
 		case 2://메뉴 단종
 			printMenu(&menu);
 			printf("Enter the number of the item to remove:");
-			int i;
-			scanf("%d", &i);
+			int i = getInt();
+			printf("\n");
 			removeMenuItem(&menu, i - 1);
 			break;
 		case 3: {//주문 생성
@@ -322,15 +416,15 @@ int main(void) {
 			printMenu(&menu);
 			while (1) {
 				printf("Enter the food menu number:(enter 0 to finish):");
-				int i;
-				scanf("%d", &i);
+				int i = getInt();
+				printf("\n");
 				if (i == 0) {
 					break;
 				}
 
 				printf("Enter quantity:");
-				int q;
-				scanf("%d", &q);
+				int q = getInt();
+				printf("\n");
 
 				addOrder(&table[n - 1], i - 1, q, &menu);
 			}
@@ -374,7 +468,7 @@ int main(void) {
 			saveMenu(&menu);  // 메뉴 저장
 			saveTables(table);  // 테이블 정보 저장
 			freeMenu(&menu);
-			for (int i = 0; i < MAX_TABLES; i++) {
+			for (int i = 0; i < MAX_INPUT; i++) {
 				freeTable(&table[i]);
 			}
 			return 0;
