@@ -29,7 +29,6 @@ typedef struct {
 } Table;
 
 // 입력 규칙. \n을 제거하기 때문에 따로 입력해 줘야 함
-static void clearBuffer();//버퍼 제거
 static int getInt(void);//음이 아닌 정수만 받음
 static char* getString(void);
 //테이블 번호 받기
@@ -57,10 +56,6 @@ static void addOrder(Table* t, int foodIndex, int quantity, Menu* m);
 static void clearTable(Table* t);
 static void freeTable(Table* t);
 
-static void clearBuffer() {
-	int c;
-	while ((c = getchar()) != '\n' && c != EOF);
-}
 static int getInt() {
 	char n[MAX_INPUT + 2];// 1 더 큰 버퍼로 최대 글자 수 초과했는지 판단
 	char* endptr;
@@ -72,7 +67,7 @@ static int getInt() {
 		}
 		else {
 			// 개행 문자 제거
-			n[strcspn(n, "\n")] = '\0';//strcspn는 \n 앞의 글자 수를 반환
+			n[strcspn(n, "\n")] = '\0';//strcspn이 \n 앞의 글자 수를 반환
 			if (strlen(n) > MAX_INPUT) {//strlen은 \0을 제외한 글자 수를 반환
 				printf("Warning: Please enter a number with %d digits or fewer.\n", MAX_INPUT);
 			}
@@ -103,7 +98,6 @@ static int getInt() {
 							printf("Error: Please enter a non-negative integer not exceeding %d.\n", INT_MAX);
 						}
 						else {
-							//clearBuffer();
 							return (int)num;
 						}
 					}
@@ -125,7 +119,6 @@ static char* getString() {
 		else {
 			s[strcspn(s, "\n")] = '\0';// \n 제거
 			if (strlen(s) <= MAX_INPUT) {
-				//clearBuffer();
 				return s;
 			}
 			else {
@@ -245,14 +238,14 @@ static void freeFoodList(Menu* m) {
 }
 
 static void initTable(Table* t) {
-	t->capacity = 10;  // 초기 용량, 필요에 따라 조정 가능
+	t->capacity = 10;  // 초기 용량.
 	t->orderArr = (Ordered*)malloc(t->capacity * sizeof(Ordered));
 	t->count = 0;
 	t->totalAmount = 0;
 }
 static void addOrder(Table* t, int index, int quantity, Menu* m) {
 	if (t->count == t->capacity) {
-		//size_t newCapacity = t->capacity * 2;수정할 부분
+		//size_t newCapacity = t->capacity * 2;
 		size_t newCapacity;
 
 		if (t->capacity > SIZE_MAX / 3 * 2) {
@@ -521,7 +514,7 @@ int main(void) {
 			printf("Order has been created. Total amount %d won\n", table[n - 1].totalAmount);
 		}
 			  break;
-		case 4: {
+		case 4: {//주문 조회
 			int n = getTableNum();
 			printf("\n===== Table %d Order =====\n", n);
 			printf("Order items:\n");
@@ -547,13 +540,13 @@ int main(void) {
 			printf("Total amount: %d won\n", t->totalAmount);
 		}
 			  break;
-		case 5: {
+		case 5: {//계산
 			int n = getTableNum();
 			printf("\nPayment of %d won has been completed. The table has been reset.\n", table[n - 1].totalAmount);
 			clearTable(&table[n - 1]);
 		}
 			  break;
-		case 6:
+		case 6://종료
 			printf("\nSaving data and exiting the program.\n");
 			saveFoodList(&menu);  // 메뉴 저장
 			saveTables(table);  // 테이블 정보 저장
