@@ -13,6 +13,7 @@ typedef struct FoodNode {
 	struct FoodNode* next;
 } FoodNode;
 typedef struct {
+	//고유 번호
 	FoodNode* head;
 	int count;
 } Menu;
